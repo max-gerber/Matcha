@@ -1,84 +1,257 @@
-/*  
+/*  SETUP
     npm install                     --save
     npm install ejs                 --save
     npm install express             --save
     npm install body-parser         --save
-    npm install mysql               --save
-    npm install express-validator   --save
     npm install bcrypt              --save
-    npm install mongodb@2.2.5          --save
+    npm install express-session     --save
+    npm install mongodb@2.2.5       --save
+    npm install cookie-parser       --save
+    npm install mysql               --save
+    npm install nodemailer          --save
+    npm install sweetalert          --save
+
+    Run XAMPP or MAMP APACHE/MySQL
+
+    Modal Errorirect
 */
 
-const express =     require('express');                                 //Include Express
-const ejs =         require('ejs');                                     //Include EJS
-const bodyParser =  require('body-parser');                             //body-parser
-const mysql =       require('mysql');                                   //mySQL
-const bcrypt =      require('bcrypt');
-const {MongoClient, ObjectID} = require('mongodb');                     //MongoDB (deconstructed)
+const express =                 require('express');                     //Include Express
+const ejs =                     require('ejs');                         //Include EJS
+ const bodyParser =              require('body-parser');                 //body-parser
+const mysql =                   require('mysql');                       //mySQL
+const bcrypt =                  require('bcrypt');                      //Encryption
+// const session =                 require('express-session');             //Sessions
+// const cookie =                  require('cookie-parser');               //Cookie
+const nodemailer =              require('nodemailer');                  //Nodemailer for Email
+const crypto =                  require('crypto');                      //Token generator
+const swal =                    require('sweetalert');
 
 const app = express();
+const urlencodedParser = bodyParser.urlencoded({ extended: false});
 
-MongoClient.connect('mongodb://localhost:27017', (err, db) => {         //Connect to database
-    if(err){
-        return console.log('Unable to connect beacuse: '+err);          //Connection error
-    }
-    console.log('Connected');
+var red = "❌ \x1b[1m \x1b[31m";
+var green = "✅ \x1b[1m \x1b[32m";
 
-    var urlencodedParser = bodyParser.urlencoded({ extended: false});   //Body-Parser
+app.use(express.static(__dirname + '/public'));                        
+app.set('view engine', 'ejs');   
 
-    app.use(express.static(__dirname + '/public'));                     //Add Public Folder (CSS)
-    app.set('view engine', 'ejs');                                      //Set View Engine to EJS
-
-    var access = "";                                                    //Declare some Variables
-    const saltRounds = 1;
-
-    app.get("/", function(req, res) {                                   //Get Root
-        const name = "TREDX";
-        access = "1";
-        res.render("index", {name, access});
-    })
-
-    app.post("/1", urlencodedParser, function(req, res) {               //GET POST REQUEST
-        access = "1";
-        console.log(req.body);
-
-        const errors = validate(req);
-
-        if (errors.length == 0) {
-            bcrypt.hash(req.body.upsw, saltRounds, function(err, hash){ //Encrypt The Password with bcrypt
-                if (err){
-                    return console.log('Unable to hash', err);
-                }
-                req.body.upsw = hash;
-                res.render("index-logged", {data: req.body});
-            });
-            db.collection('Users').insertOne({                          //Insert user into database
-                username: req.body.uname,
-                password: req.body.upsw                                 //Must figure out how to add HASHED password
-            }, (err, result) => {
-                if (err){
-                    return console.log('Unable to insert', err);
-                }
-                console.log(JSON.stringify(result.ops, undefined, 2));  //Inserted documents
-            });
-        } else {
-            console.log(errors);
-        }
-    })
-    
-    function validate(req) {                                            //Validate Email And Password - Only checking if entered
-        const errors = [];
-
-        if (!req.body.uname) {                                          //uname
-            errors.push("Email Has Not Been Entered!");
-        }
-        if (!req.body.upsw) {                                           //upsw
-            errors.push("Password Has Not Been Entered!");
-        }
-        return errors;
-    }
-
-    app.listen(8080, function() {                                       //Shh and listen!
-        console.log("Listen on 8080");
-    })
+var con = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "123"
 });
+
+con.connect(function(err) {
+    if (err){
+        console.log(err);
+    }
+    console.log(green+ " CONNECTED TO MySQL \x1b[33m PORT: 3030 \x1b[0m");
+    con.query("CREATE DATABASE maindata", function (err, result) {
+        if (err){
+            console.log(red+err+" \x1b[0m");
+            return;
+        }
+        console.log(green + "DATABASE CREATED : \x1b[33m MAINDATA \x1b[0m");
+        var con = mysql.createConnection({
+            host: "localhost",
+            user: "root",
+            password: "123",
+            database: "maindata"
+        });
+
+        con.connect(function(err) {
+            if (err){
+                console.log(red+ " DATABASE ALREADY EXIST'S \x1b[0m");
+                return;
+            }
+            console.log(green +" CONNECTED TO MySQL \x1b[33m PORT: 3030 \x1b[0m");
+            var sql = "CREATE TABLE userdata (`id` INT AUTO_INCREMENT PRIMARY KEY, `username` VARCHAR(255), `name` VARCHAR(255), `surname` VARCHAR(255), `email` VARCHAR(255), `password` VARCHAR(255), `code` VARCHAR(4), `token` VARCHAR(255), `verified` TINYINT(1) DEFAULT '0', `reports` INT(5), `bio` TEXT, `tags` TEXT)";
+            con.query(sql, function (err, result) {
+                if (err){
+                    console.log(err);
+                }
+                console.log(green +"TABLE CREATED  :   \x1b[33m USERDATA \x1b[0m");
+            });
+        });
+    });
+});
+
+var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'official.matcha@gmail.com',
+      pass: 'MatchaMatcha'
+    }
+});
+
+app.get("/", function(req, res) {                                     
+    res.render("index");
+});
+
+app.post("/", urlencodedParser, function(req, res) {
+    con.query('SELECT `password` from `maindata`.`userdata` WHERE `username`= ?', [req.body.uname], function(err, result, fields) {
+    if (err) {
+        console.log(red + 'Error while performing Query1.')
+    }
+    else {
+        bcrypt.compare(req.body.upsw, result[0].password, (err, response) => {
+            if (response == true){
+                console.log(green+" Successfully Logged in! \x1b[0m ");
+                res.redirect("/main.txt");
+            }
+            else {
+                console.log(red+"Unuccessfully Logged in! \x1b[0m ");
+            }
+        });
+    }
+    });
+});
+
+app.get("/reset_pass.rar", (req, res) => {
+    res.render("reset_pass");
+})
+
+app.post("/reset_pass", urlencodedParser, (req, res) => {
+    token = crypto.randomBytes(16).toString(`hex`);
+    con.query('UPDATE `maindata`.`userdata` SET `token` = ? WHERE `email` = ?', [token, req.body.uemail], (err, results, fields) => {
+        if (err) {
+            console.log(red + 'ERROR ON QUERY #2 \x1b[0m');
+        }
+        else {
+            var mailOptions = {
+                from: 'official.matcha@gmail.com',
+                to: req.body.uemail,
+                subject: 'NEED SOME HELP THERE? ❤️',
+                html: '<div style="border: 5px SOLID #FF5864"><h1 style="color:#FF5864;text-align:center;">WELCOME TO MATCHA</h1> <h2 style="font-size:30px;color:#FF5864;text-align:center;">'+"Forgot your password? Don't worry. Click here for a new one."+"<br><a style='font-size:20px;text-align:center;color:white;text-decoration:none;background-color:#FF5864;padding: 5px 5px;' href='http://localhost:8080/new_pass.json/token="+token+"'>RESET PASSWORD</a>"+"</div>"
+            };
+            transporter.sendMail(mailOptions, function(error, info){
+                if (error) {
+                    console.log(error);
+                } else {
+                    console.log(green + ' EMAIL SENT: \x1b[0m' + info.response);
+                }
+            });
+        }
+    })
+})
+
+app.get("/register.jpeg", function(req, res) {
+    res.render("register");
+});
+
+app.post("/register", urlencodedParser, function(req, res) {
+    const errors = validateReg(req);
+    if (errors.length == 0) {
+        bcrypt.hash(req.body.upsw, 8, (err, hash) => {
+            if (err){
+                return console.log(red + " UNABLE TO HASH \x1b[0m", err);
+            }
+            token = crypto.randomBytes(16).toString(`hex`);
+            var mailOptions = {
+                from: 'official.matcha@gmail.com',
+                to: req.body.uemail,
+                subject: 'WELCOME TO MATCHA ❤️',
+                html: '<div style="border: 5px SOLID #FF5864"><h1 style="color:#FF5864;text-align:center;">WELCOME TO MATCHA</h1> <h2 style="font-size:30px;color:#FF5864;text-align:center;">'+req.body.ufname+" "+req.body.ulname+
+                "<br><a style='font-size:20px;text-align:center;color:white;text-decoration:none;background-color:#FF5864;padding: 5px 5px;' href='http://localhost:8080/profile_setup.mp3/token="+token+"'>LOGIN</a>"+"</div>"
+            };
+            con.query('SELECT * FROM `maindata`.`userdata` WHERE `username` = ?', [req.body.uname], (err, results, fields) => {
+                if (err) {
+                    console.log(red + 'ERROR ON QUERY #3 \x1b[0m');
+                }
+                if (results.length == 0){
+                    con.query('SELECT * FROM `maindata`.`userdata` WHERE `email` = ?', [req.body.uemail], (err, results, fields) => {
+                        if (err) {
+                            console.log(red + 'ERROR ON QUERY #4 \x1b[0m');
+                        }
+                        if (results.length == 0){
+                            con.query('INSERT INTO `maindata`.`userdata` (`name`, `surname`, `email`, `username`, `password`, `token`) VALUES (?,?,?,?,?,?)', [req.body.ufname, req.body.ulname, req.body.uemail, req.body.uname, hash, token], function(err, result, fields){
+                                if (err) {
+                                    console.log(red + 'ERROR ON QUERY #5 \x1b[0m');
+                                }
+                                else {
+                                    console.log(green + ' SUCCESFULLY ADDED NEW USER! \x1b[0m');
+                                    transporter.sendMail(mailOptions, function(error, info){
+                                        if (error) {
+                                            console.log(error);
+                                        } else {
+                                            console.log(green + ' EMAIL SENT: \x1b[0m' + info.response);
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        else {
+                            console.log(red + 'EMAIL EXISTS IN DATABASE \x1b[0m');
+                        }
+                    })
+                }
+                else {
+                    console.log(red + 'USERNAME EXISTS IN DATABASE \x1b[0m');
+                }
+            })
+        })
+    }
+    else {
+        console.log(errors);
+    }
+});
+
+app.get("/profile_setup.mp3/:token", function(req, res) {
+    res.render("profile_setup", {output: req.params.token});
+});
+
+app.post("/profile_setup/:token" , urlencodedParser, function(req, res) {
+    var code = evaluateCode(req.body.gender, req.body.pref);
+    var token = req.params.token;
+    token = token.slice(6,38);
+    con.query('UPDATE `maindata`.`userdata` SET `code` = ?, `bio` = ?, `tags` = ? WHERE `token` = ?', [code, req.body.bio, req.body.tags, token], (err, result, fields) => {
+        if (err) {
+            console.log(red +'ERROR ON QUERY #6 \x1b[0m', err);
+        }
+        else {
+            console.log(green +'SUCCESFULLY ADDED USER PREFERENCES! \x1b[0m');
+            res.redirect('/');
+        }
+        });
+});
+
+app.get("/main.txt", function(req, res) {
+    res.render("main");
+});
+
+app.listen(8080, function() {                                         
+    console.log(green + "SERVER LAUNCHED :: \x1b[33m PORT: 8080 \x1b[0m");
+});
+
+function validateReg(req) {
+    const errors = [];
+    if (req.body.upsw != req.body.upsw2) {
+        errors.push("Passwords Do not match!");
+    }
+    return errors;
+};
+
+function evaluateCode(gender, preference) {
+    var code;
+
+    if (gender == "male"){
+        code = "01";
+    }
+    else {
+        code = "10";
+    }
+    if (preference == "none"){
+        code = code+"00";
+    }
+    else if (preference == "male"){
+        code = code+"01";
+    }
+    else if (preference == "female"){
+        code = code+"10";
+    }
+    else if (preference == "both"){
+        code = code+"11";
+    }
+    return code;
+}
