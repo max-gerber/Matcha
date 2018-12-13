@@ -1,28 +1,36 @@
-<link href="/style.css" rel="stylesheet" type="text/css">
-<link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+<% include includes %>
+<% include footer %>
 
 <div>
     <br>
 </div>
+
 <h3>MATCHA</h3>
 <div class="title_1">
-<h1>LOG IN</h1>
+    <h1>LOG IN</h1>
 </div>
 
-    <div class='title_1'>
-        <br>
-            <form action="/" method="post">
-                <h2>ENTER USERNAME</h2>
-                <input type="text" name="uname" pattern="[A-Za-z0-9]+" placeholder="ENTER YOUR NAME HERE" required>
-                <h2>ENTER PASSWORD</h2>
-                <input type="password" name="upsw" placeholder="ENTER YOUR PASSWORD" required>
-                <input type="submit" value="submit">
-            </form>
+<% if (corrLog == 1) { %>
+<script>swal("Error", "User not Found", "error");</script>
+<% } %>
 
-    </div>
-    <div style="text-align: center;">
-        <br><a class="abut" href="/register.jpeg">REGISTER</a>
-    </div>
-<div class="footer">
-    <p2>MATCHA | TREDEAUX PITOUT & MAX GERBER</p2>
+<div class='title_1'>
+    <br>
+    <form action="/" method="post">
+        <h2>ENTER USERNAME</h2>
+        <input type="text" name="uname" pattern="[A-Za-z0-9]+" placeholder="ENTER YOUR NAME HERE" required>
+        <h2>ENTER PASSWORD</h2>
+        <input type="password" name="upsw" placeholder="ENTER YOUR PASSWORD" required>
+        <br><br>
+        <input type="submit" value="SUBMIT">
+    </form>
+
+</div>
+
+<div style="text-align: center;">
+    <br><a class="abut" href="/register.jpeg">REGISTER</a>
+</div>
+<br>
+<div style="text-align: center;">
+    <br><a class="abut" href="/reset_pass.rar">FORGOT YOUR PASSWORD?</a>
 </div>
