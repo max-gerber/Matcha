@@ -1,6 +1,8 @@
 <% include includes %>
 <% include footer %>
 
+<head>
+</head>
 <div class="header">
   <ul>
     <li><a class="active" href="/main.txt">HOME</a></li>
@@ -9,83 +11,12 @@
   </ul>
 </div>
 <div class="mainlay">
-  <div class="leftpanel">
-    <h1 style="margin-bottom: -40px;">USER INFO</h1>
-    <h5>_____________________</h5><br>
-    <h5>
-      <%= uname %>
-    </h5>
-    <h5>
-      <%= fname %>
-    </h5>
-    <h5>
-      <%= sname %>
-    </h5>
-    <h5>
-      <%= email %>
-    </h5>
-    <h5>
-      <%= pref %>
-    </h5>
-    <br>
-    <h1 style="margin-bottom: -40px;">CONNECTED</h1>
-    <h5>_____________________</h5>
-    <div class="verscroll" style="direction:rtl;margin-left:10px;">
-      <% for (i = 0; i < uliked.length; i++) { %>
-      <a href="http://localhost:8888/user/usr=<%=  uliked[i]  %>">
-        <h5>
-          <%= uliked[i] %>
-        </h5>
-      </a>
-      <% } %>
-    </div>
-    <h1 style="margin-bottom: -40px;">VISIT HISTORY</h1>
-    <h5>_____________________</h5><br>
-    <div class="verscroll" style="direction:rtl;height:200px;">
-      <% for (i = 0; i < visithis.length; i++) { %>
-      <a href="http://localhost:8888/user/usr=<%=  visithis[i]  %>">
-        <h5>
-          <%= visithis[i] %>
-        </h5>
-      </a>
-      <% } %>
-    </div>
-  </div>
-
-  <div class="rightpanel">
-    <h1 style="margin-bottom: -40px;">CHATS</h1>
-    <h5>_____________________</h5>
-    <div class="verscroll">
-      <% for(i = 0; i < log.length; i += 2) { %>
-      <% var id = log[i + 1]; %>
-      <a href="http://localhost:8888/user/usr=<%= id %>">
-        <h2>
-          <%= log[i] %>
-        </h2>
-      </a>
-      <% } %>
-    </div>
-    <h1 style="margin-bottom: -40px;">PAGE VIEWS</h1>
-    <h5>_____________________</h5>
-    <div class="verscroll">
-      <% for (i = 0; i < visits.length; i++) { %>
-      <a href="http://localhost:8888/user/usr=<%= visits[i] %>">
-        <h2>
-          <%= visits[i] %>
-        </h2>
-      </a>
-      <% } %>
-    </div>
-  </div>
+  <% include leftpanel %>
+  <% include rightpanel %>
 
   <div class="middle">
     <br>
-    <div class="filter">
-      <form>
-        <h2>
-        </h2>
-      </form>
-    </div>
+      <% include filter %>
 
     <% for(i = 0; i < ppl.length; i += 2) { %>
     <div class="profile">
@@ -95,11 +26,7 @@
         </h5>
       </a>
     </div>
+    <br>
     <% } %>
   </div>
 </div>
-<script>
-  navigator.geolocation.getCurrentPosition(function (position) {
-    console.log(position);
-  });
-</script>
